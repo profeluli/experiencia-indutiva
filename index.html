@@ -9,23 +9,39 @@
 <body>
     <div class="score-board">
         <h3>🏆 Placar Detetive</h3>
-        <div>Pontos: <span id="score">0</span></div>
-        <div>Dicas usadas: <span id="hints-used">0</span></div>
+        <div class="score-item">
+            <span>Pontos:</span>
+            <span id="score">0</span>
+        </div>
+        <div class="score-item">
+            <span>Dicas:</span>
+            <span id="hints-used">0</span>
+        </div>
+        <div class="score-item">
+            <span>Tempo:</span>
+            <span id="timer">--:--</span>
+        </div>
         <div class="progress-bar">
             <div class="progress-fill" id="progress"></div>
+            <div class="progress-text" id="progress-text">0%</div>
         </div>
-        <div>Progresso: <span id="progress-text">0%</span></div>
+        <div style="margin-top: 10px; font-size: 0.9em; color: #ccc;">
+            Missões: <span id="missions-status">0/3</span>
+        </div>
     </div>
 
     <div class="game-container">
         <div class="header">
             <h1>🕵️ O MISTÉRIO DA FAZENDA SOLAR</h1>
             <div class="detective-badge">DETETIVE ESTATÍSTICO</div>
-            <p>Investigate o caso usando estimativas indutivas para descobrir a verdade!</p>
+            <p>Use estimativas indutivas para descobrir a verdade sobre a produção solar!</p>
+            <div class="timer" id="game-timer">
+                ⏱️ Tempo decorrido: <span id="elapsed-time">00:00</span>
+            </div>
         </div>
 
         <div class="evidence-section">
-            <div class="evidence-card">
+            <div class="evidence-card" onclick="highlightEvidence(this)">
                 <h3>📊 Evidência #1: Produção Mensal</h3>
                 <ul>
                     <li><strong>Janeiro:</strong> 12.500 kWh</li>
@@ -33,15 +49,16 @@
                     <li><strong>Maio:</strong> 9.900 kWh</li>
                     <li><strong>Julho:</strong> 8.600 kWh</li>
                 </ul>
+                <small style="color: #FFD700;">📝 Clique para destacar esta evidência</small>
             </div>
 
-            <div class="evidence-card">
+            <div class="evidence-card" onclick="highlightEvidence(this)">
                 <h3>👤 Evidência #2: Depoimento</h3>
                 <p><em>"Notei que alguns painéis estão ficando embaçados ao longo do tempo. Parece acúmulo de sujeira, mas não temos registros de limpeza."</em></p>
                 <p><strong>- Técnico João Silva</strong></p>
             </div>
 
-            <div class="evidence-card">
+            <div class="evidence-card" onclick="highlightEvidence(this)">
                 <h3>📸 Evidência #3: Dados Técnicos</h3>
                 <ul>
                     <li><strong>Total de painéis:</strong> 500 unidades</li>
@@ -50,7 +67,7 @@
                 </ul>
             </div>
 
-            <div class="evidence-card">
+            <div class="evidence-card" onclick="highlightEvidence(this)">
                 <h3>📘 Evidência #4: Manual Técnico</h3>
                 <p><em>"Eficiência pode reduzir 1-3% ao mês sem manutenção adequada devido ao acúmulo de poeira e detritos."</em></p>
             </div>
@@ -59,95 +76,139 @@
         <div class="missions-container">
             <h2>🎯 MISSÕES DO DETETIVE</h2>
             
-            <div class="mission">
-                <h4>Missão 1: Análise de Tendência (30 pontos)</h4>
-                <p>Com base nos dados de produção, qual é a taxa de redução mensal aproximada?</p>
+            <div class="mission" id="mission1">
+                <h4>
+                    <div class="status-icon status-pending" id="status1">1</div>
+                    Missão 1: Análise de Tendência (30 pontos)
+                </h4>
+                <p>Analise os dados de produção e calcule a taxa de redução mensal:</p>
+                
+                <div class="calculator">
+                    <h5>🧮 Calculadora de Variação</h5>
+                    <div class="calc-row">
+                        Janeiro → Março: (12.500 - 11.200) / 12.500 × 100 = <strong>10,4%</strong> em 2 meses
+                    </div>
+                    <div class="calc-row">
+                        Taxa mensal média: 10,4% ÷ 2 = <strong>5,2%</strong>
+                    </div>
+                </div>
                 
                 <div class="input-group">
                     <label>Taxa de redução mensal (%):</label>
-                    <input type="number" id="reduction-rate" placeholder="Ex: 5.2" step="0.1">
+                    <input type="number" id="reduction-rate" placeholder="Ex: 5.2" step="0.1" min="0" max="20">
+                    <div class="input-feedback" id="feedback1"></div>
                 </div>
                 
                 <div class="input-group">
-                    <label>Justifique seu cálculo:</label>
-                    <textarea id="calculation-method" placeholder="Explique como chegou a este resultado..." rows="3"></textarea>
+                    <label>Explique seu método de cálculo:</label>
+                    <textarea id="calculation-method" placeholder="Descreva como você calculou..." rows="3"></textarea>
                 </div>
                 
                 <button class="btn hint-btn" onclick="showHint(1)">💡 Dica (-5 pontos)</button>
-                <button class="btn" onclick="checkMission1()">Verificar Resposta</button>
+                <button class="btn" onclick="checkMission1()" id="check1">Verificar Resposta</button>
                 
                 <div id="hint1" class="hint-box">
-                    <strong>Dica:</strong> Compare os valores entre os meses. Janeiro→Março: de 12.500 para 11.200. Calcule a variação percentual!
+                    <strong>💡 Dica:</strong> Compare Janeiro (12.500) com Março (11.200). A diferença é 1.300 kWh em 2 meses. Calcule o percentual de redução!
                 </div>
             </div>
 
-            <div class="mission">
-                <h4>Missão 2: Predição (40 pontos)</h4>
-                <p>Baseado no padrão identificado, estime a produção para Setembro e Novembro:</p>
+            <div class="mission locked" id="mission2">
+                <h4>
+                    <div class="status-icon status-locked" id="status2">🔒</div>
+                    Missão 2: Predição de Valores (40 pontos)
+                </h4>
+                <p>Use o padrão identificado para estimar produções futuras:</p>
                 
                 <div class="input-group">
                     <label>Produção estimada em Setembro (kWh):</label>
-                    <input type="number" id="september-estimate" placeholder="Ex: 7500">
+                    <input type="number" id="september-estimate" placeholder="Ex: 7500" disabled>
+                    <div class="input-feedback" id="feedback2a"></div>
                 </div>
                 
                 <div class="input-group">
                     <label>Produção estimada em Novembro (kWh):</label>
-                    <input type="number" id="november-estimate" placeholder="Ex: 6200">
+                    <input type="number" id="november-estimate" placeholder="Ex: 6200" disabled>
+                    <div class="input-feedback" id="feedback2b"></div>
                 </div>
                 
-                <button class="btn hint-btn" onclick="showHint(2)">💡 Dica (-5 pontos)</button>
-                <button class="btn" onclick="checkMission2()">Verificar Resposta</button>
+                <div class="calculator" style="display: none;" id="calc2">
+                    <h5>🧮 Cálculo Assistido</h5>
+                    <div class="calc-row">
+                        Julho: 8.600 kWh
+                    </div>
+                    <div class="calc-row">
+                        Setembro (2 meses depois): 8.600 × (1 - <span id="rate-display">5.2</span>%)² = <span id="sept-calc">7.743</span> kWh
+                    </div>
+                    <div class="calc-row">
+                        Novembro (4 meses depois): 8.600 × (1 - <span id="rate-display2">5.2</span>%)⁴ = <span id="nov-calc">6.970</span> kWh
+                    </div>
+                </div>
+                
+                <button class="btn hint-btn" onclick="showHint(2)" disabled>💡 Dica (-5 pontos)</button>
+                <button class="btn" onclick="checkMission2()" id="check2" disabled>Verificar Resposta</button>
                 
                 <div id="hint2" class="hint-box">
-                    <strong>Dica:</strong> Se a redução é constante por mês, aplique a mesma taxa encontrada na Missão 1!
+                    <strong>💡 Dica:</strong> Se a redução é de X% por mês, aplique essa taxa a partir de Julho (8.600 kWh). Setembro = Julho × (1-X%)²
                 </div>
             </div>
 
-            <div class="mission">
-                <h4>Missão 3: Diagnóstico Final (30 pontos)</h4>
-                <p>Com base em todas as evidências, qual é sua conclusão sobre o caso?</p>
+            <div class="mission locked" id="mission3">
+                <h4>
+                    <div class="status-icon status-locked" id="status3">🔒</div>
+                    Missão 3: Diagnóstico do Mistério (30 pontos)
+                </h4>
+                <p>Com base em todas as evidências, resolva o mistério:</p>
                 
                 <div class="input-group">
-                    <label>O que está causando a redução na produção?</label>
-                    <select id="diagnosis">
-                        <option value="">Selecione sua hipótese...</option>
-                        <option value="sabotage">Sabotagem intencional</option>
+                    <label>Causa principal da redução:</label>
+                    <select id="diagnosis" disabled>
+                        <option value="">Selecione sua conclusão...</option>
+                        <option value="sabotage">Sabotagem intencional contra a empresa</option>
                         <option value="maintenance">Falta de manutenção (acúmulo de sujeira)</option>
-                        <option value="equipment">Defeito nos equipamentos</option>
-                        <option value="weather">Mudanças climáticas</option>
+                        <option value="equipment">Defeito progressivo nos equipamentos</option>
+                        <option value="weather">Mudanças nas condições climáticas</option>
+                        <option value="aging">Envelhecimento natural dos painéis</option>
                     </select>
+                    <div class="input-feedback" id="feedback3"></div>
                 </div>
                 
                 <div class="input-group">
-                    <label>Recomendação para o Sr. Martinez:</label>
-                    <textarea id="recommendation" placeholder="Que ações você sugere?" rows="4"></textarea>
+                    <label>Sua recomendação para o Sr. Martinez:</label>
+                    <textarea id="recommendation" placeholder="Que ações específicas você sugere?" rows="4" disabled></textarea>
                 </div>
                 
-                <button class="btn hint-btn" onclick="showHint(3)">💡 Dica (-5 pontos)</button>
-                <button class="btn" onclick="checkMission3()">Verificar Resposta</button>
+                <button class="btn hint-btn" onclick="showHint(3)" disabled>💡 Dica (-5 pontos)</button>
+                <button class="btn" onclick="checkMission3()" id="check3" disabled>Verificar Diagnóstico</button>
                 
                 <div id="hint3" class="hint-box">
-                    <strong>Dica:</strong> Relacione o depoimento do técnico com o manual técnico. A redução é consistente com alguma causa natural?
+                    <strong>💡 Dica:</strong> Considere: a redução é constante (~5% mês), o técnico mencionou sujeira, e o manual fala sobre 1-3% de perda mensal. Que conclusão você tira?
                 </div>
             </div>
         </div>
 
         <div style="text-align: center; margin-top: 30px;">
-            <button class="btn" onclick="submitCase()" style="font-size: 1.3em; padding: 15px 40px;">
+            <button class="btn primary" onclick="submitCase()" id="final-submit" disabled>
                 🎯 FINALIZAR INVESTIGAÇÃO
+            </button>
+            <button class="btn" onclick="resetGame()" style="background: linear-gradient(45deg, #666, #888);">
+                🔄 Reiniciar Jogo
             </button>
         </div>
     </div>
 
     <div class="result-modal" id="resultModal">
         <div class="modal-content">
-            <h2 id="result-title">🏆 CASO RESOLVIDO!</h2>
+            <div class="badge-display" id="badge-emoji">🏆</div>
+            <h2 id="result-title">CASO RESOLVIDO!</h2>
             <div id="result-content"></div>
             <div id="final-score"></div>
-            <button class="btn" onclick="closeModal()">Fechar</button>
+            <div id="performance-analysis"></div>
+            <div style="margin-top: 30px;">
+                <button class="btn primary" onclick="closeModal()">Fechar Relatório</button>
+                <button class="btn" onclick="resetGame(); closeModal();">Jogar Novamente</button>
+            </div>
         </div>
     </div>
-
     
 </body>
 </html>

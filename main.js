@@ -1,148 +1,140 @@
-        let score = 0;
-        let hintsUsed = 0;
-        let missionsCompleted = 0;
+// Game state variables
+        let gameState = {
+            score: 0,
+            hintsUsed: 0,
+            missionsCompleted: 0,
+            startTime: Date.now(),
+            mission1Data: null,
+            mission2Data: null,
+            mission3Data: null
+        };
+        
+        let gameTimer;
+        
+        // Initialize game
+        function initGame() {
+            updateDisplay();
+            startTimer();
+        }
+        
+        function startTimer() {
+            gameTimer = setInterval(() => {
+                const elapsed = Date.now() - gameState.startTime;
+                const minutes = Math.floor(elapsed / 60000);
+                const seconds = Math.floor((elapsed % 60000) / 1000);
+                document.getElementById('elapsed-time').textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                document.getElementById('timer').textContent = 
+                    `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+        
+        function highlightEvidence(card) {
+            // Remove previous highlights
+            document.querySelectorAll('.evidence-card').forEach(c => {
+                c.style.borderLeft = '5px solid #FFD700';
+            });
+            
+            // Highlight selected card
+            card.style.borderLeft = '5px solid #00ff88';
+            card.style.boxShadow = '0 0 20px rgba(0, 255, 136, 0.3)';
+            
+            // Add temporary glow effect
+            setTimeout(() => {
+                card.style.borderLeft = '5px solid #FFD700';
+                card.style.boxShadow = '';
+            }, 2000);
+        }
         
         function showHint(missionNumber) {
             const hintBox = document.getElementById(`hint${missionNumber}`);
-            hintBox.style.display = 'block';
-            hintsUsed++;
-            score -= 5;
-            updateScore();
-        }
-        
-        function updateScore() {
-            document.getElementById('score').textContent = score;
-            document.getElementById('hints-used').textContent = hintsUsed;
-            const progress = (missionsCompleted / 3) * 100;
-            document.getElementById('progress').style.width = progress + '%';
-            document.getElementById('progress-text').textContent = Math.round(progress) + '%';
+            if (hintBox.style.display === 'none' || !hintBox.style.display) {
+                hintBox.style.display = 'block';
+                gameState.hintsUsed++;
+                gameState.score = Math.max(0, gameState.score - 5);
+                updateDisplay();
+                
+                // Disable hint button
+                event.target.disabled = true;
+                event.target.textContent = '💡 Dica Usada';
+            }
         }
         
         function checkMission1() {
             const reductionRate = parseFloat(document.getElementById('reduction-rate').value);
-            const method = document.getElementById('calculation-method').value;
+            const method = document.getElementById('calculation-method').value.trim();
             
-            if (!reductionRate || !method) {
-                alert('Por favor, preencha ambos os campos!');
+            if (isNaN(reductionRate) || !method) {
+                showFeedback('feedback1', 'Por favor, preencha ambos os campos!', 'incorrect');
                 return;
             }
             
-            // Taxa correta é aproximadamente 5-6% (variação entre os meses)
-            if (reductionRate >= 4.5 && reductionRate <= 7) {
-                score += 30;
-                missionsCompleted = Math.max(missionsCompleted, 1);
-                alert('✅ Excelente! Você identificou corretamente a taxa de redução.');
-            } else if (reductionRate >= 3 && reductionRate <= 9) {
-                score += 20;
-                missionsCompleted = Math.max(missionsCompleted, 1);
-                alert('⚠️ Próximo da resposta! A taxa está um pouco fora do esperado.');
+            let score = 0;
+            let feedback = '';
+            
+            if (reductionRate >= 5.0 && reductionRate <= 5.5) {
+                score = 30;
+                feedback = '🎯 Perfeito! Taxa correta (~5,2% por mês). Excelente análise dos dados!';
+                showFeedback('feedback1', feedback, 'correct');
+            } else if (reductionRate >= 4.5 && reductionRate <= 6.0) {
+                score = 25;
+                feedback = '👍 Muito bom! Você está próximo do valor correto (~5,2%).';
+                showFeedback('feedback1', feedback, 'partial');
+            } else if (reductionRate >= 3.0 && reductionRate <= 7.0) {
+                score = 15;
+                feedback = '⚠️ Parcialmente correto. Revise seus cálculos - a taxa correta é ~5,2%.';
+                showFeedback('feedback1', feedback, 'partial');
             } else {
-                score += 10;
-                alert('❌ A taxa parece estar incorreta. Revise os cálculos.');
+                score = 5;
+                feedback = '❌ Taxa incorreta. Use os dados: Jan(12.500)→Mar(11.200) = 10,4% em 2 meses.';
+                showFeedback('feedback1', feedback, 'incorrect');
             }
             
-            updateScore();
+            gameState.score += score;
+            gameState.mission1Data = { rate: reductionRate, method: method, score: score };
+            
+            if (score >= 20) {
+                completeMission(1);
+                unlockMission(2);
+            }
+            
+            updateDisplay();
         }
         
         function checkMission2() {
-            const sept = parseInt(document.getElementById('september-estimate').value);
-            const nov = parseInt(document.getElementById('november-estimate').value);
+            const septEst = parseInt(document.getElementById('september-estimate').value);
+            const novEst = parseInt(document.getElementById('november-estimate').value);
             
-            if (!sept || !nov) {
-                alert('Por favor, preencha ambas as estimativas!');
+            if (isNaN(septEst) || isNaN(novEst)) {
+                showFeedback('feedback2a', 'Preencha ambas as estimativas!', 'incorrect');
                 return;
             }
             
-            // Setembro (~7500) e Novembro (~6500) considerando redução de ~5.5%
+            const rate = gameState.mission1Data.rate / 100;
+            const julyProduction = 8600;
+            
+            // Cálculos corretos (aproximados)
+            const correctSept = julyProduction * Math.pow(1 - rate, 2); // 2 meses após julho
+            const correctNov = julyProduction * Math.pow(1 - rate, 4); // 4 meses após julho
+            
             let septScore = 0;
             let novScore = 0;
             
-            if (sept >= 7200 && sept <= 7800) septScore = 20;
-            else if (sept >= 6800 && sept <= 8200) septScore = 15;
-            else septScore = 5;
+            // Avaliação Setembro
+            const septError = Math.abs(septEst - correctSept) / correctSept;
+            if (septError <= 0.05) septScore = 20;
+            else if (septError <= 0.10) septScore = 17;
+            else if (septError <= 0.15) septScore = 13;
+            else if (septError <= 0.25) septScore = 8;
+            else septScore = 3;
             
-            if (nov >= 6200 && nov <= 6800) novScore = 20;
-            else if (nov >= 5800 && nov <= 7200) novScore = 15;
-            else novScore = 5;
+            // Avaliação Novembro
+            const novError = Math.abs(novEst - correctNov) / correctNov;
+            if (novError <= 0.05) novScore = 20;
+            else if (novError <= 0.10) novScore = 17;
+            else if (novError <= 0.15) novScore = 13;
+            else if (novError <= 0.25) novScore = 8;
+            else novScore = 3;
             
-            const totalMission2 = septScore + novScore;
-            score += totalMission2;
-            missionsCompleted = Math.max(missionsCompleted, 2);
-            
-            if (totalMission2 >= 35) {
-                alert('🎯 Predições excelentes! Você domina as estimativas indutivas.');
-            } else if (totalMission2 >= 25) {
-                alert('👍 Boas estimativas! Algumas pequenas correções melhorariam a precisão.');
-            } else {
-                alert('🤔 As estimativas precisam ser revisadas. Considere o padrão identificado na Missão 1.');
-            }
-            
-            updateScore();
-        }
-        
-        function checkMission3() {
-            const diagnosis = document.getElementById('diagnosis').value;
-            const recommendation = document.getElementById('recommendation').value;
-            
-            if (!diagnosis || !recommendation) {
-                alert('Por favor, preencha ambos os campos!');
-                return;
-            }
-            
-            if (diagnosis === 'maintenance') {
-                score += 30;
-                alert('🕵️ Diagnóstico perfeito! A falta de manutenção explica a redução constante.');
-            } else {
-                score += 10;
-                alert('🤔 Diagnóstico parcial. Revise as evidências sobre acúmulo de sujeira.');
-            }
-            
-            missionsCompleted = 3;
-            updateScore();
-        }
-        
-        function submitCase() {
-            if (missionsCompleted < 3) {
-                alert('Complete todas as missões antes de finalizar a investigação!');
-                return;
-            }
-            
-            let badge = '';
-            let evaluation = '';
-            
-            if (score >= 80) {
-                badge = '🏆 SHERLOCK HOLMES ESTATÍSTICO';
-                evaluation = 'Investigação excepcional! Você dominou completamente o uso de estimativas indutivas.';
-            } else if (score >= 60) {
-                badge = '🥈 DETETIVE EXPERIENTE';
-                evaluation = 'Ótimo trabalho! Suas habilidades de estimativa estão bem desenvolvidas.';
-            } else if (score >= 40) {
-                badge = '🥉 INVESTIGADOR COMPETENTE';
-                evaluation = 'Bom progresso! Continue praticando para aperfeiçoar suas estimativas.';
-            } else {
-                badge = '📝 DETETIVE EM TREINAMENTO';
-                evaluation = 'Continue estudando! O importante é aprender com os erros.';
-            }
-            
-            document.getElementById('result-title').textContent = badge;
-            document.getElementById('result-content').innerHTML = `
-                <p>${evaluation}</p>
-                <h3>📋 Solução do Caso:</h3>
-                <p>A redução na produção da fazenda solar era causada pelo <strong>acúmulo progressivo de sujeira</strong> nos painéis, resultando em uma perda de eficiência de aproximadamente 5,5% ao mês.</p>
-                <p>Isso é um padrão comum em instalações solares sem manutenção preventiva regular.</p>
-            `;
-            document.getElementById('final-score').innerHTML = `
-                <h3>Pontuação Final: ${score} pontos</h3>
-                <p>Dicas utilizadas: ${hintsUsed}</p>
-            `;
-            
-            document.getElementById('resultModal').style.display = 'block';
-        }
-        
-        function closeModal() {
-            document.getElementById('resultModal').style.display = 'none';
-        }
-        
-        // Initialize
-        updateScore()
-    
+            const totalScore = septScore + novScore;
+            gameState.score +=
